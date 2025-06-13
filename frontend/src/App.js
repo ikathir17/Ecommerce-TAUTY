@@ -6,12 +6,15 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import Navbar from './components/layout/Navbar';
+import Footer from './components/layout/Footer';
 import Home from './pages/Home';
 import Auth from './pages/Auth';
 import Admin from './pages/Admin';
 import CategoryPage from './pages/CategoryPage';
 import ProductDetail from './pages/ProductDetail';
 import Cart from './pages/Cart';
+import Orders from './pages/Orders';
+import Checkout from './pages/Checkout';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Create a theme instance
@@ -133,10 +136,13 @@ function App() {
             <Route path="/:category" element={<CategoryPage />} />
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/cart" element={<Cart />} />
+            <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+            <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
               {/* Add more routes as we create the components */}
               </Routes>
             </Box>
           </Router>
+          <Footer />
         </CartProvider>
       </AuthProvider>
     </ThemeProvider>

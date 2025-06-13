@@ -28,8 +28,19 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'processing', 'shipped', 'delivered'],
+    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
     default: 'pending',
+  },
+  paymentMethod: {
+    type: String,
+    enum: ['upi', 'cod'],
+    required: true,
+  },
+  transactionId: String,
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'confirmed'],
+    default: 'confirmed',
   },
   shippingAddress: {
     street: String,

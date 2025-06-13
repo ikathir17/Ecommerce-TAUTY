@@ -2,8 +2,8 @@ import axios from 'axios';
 import { config } from './config';
 
 export const productService = {
-    async getAllProducts() {
-        const response = await axios.get(config.endpoints.products.all);
+    async getAllProducts(query = '') {
+        const response = await axios.get(config.endpoints.products.all(query));
         return response.data;
     },
 

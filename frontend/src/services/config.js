@@ -14,7 +14,7 @@ export const config = {
             login: `${API_URL}/auth/login`,
         },
         products: {
-            all: `${API_URL}/products`,
+            all: (query) => `${API_URL}/products${query ? `?q=${encodeURIComponent(query)}` : ''}`,
             byCategory: (category) => `${API_URL}/products/category/${category}`,
             single: (id) => `${API_URL}/products/${id}`,
         },
@@ -24,6 +24,10 @@ export const config = {
         orders: {
             create: `${API_URL}/orders`,
             myOrders: `${API_URL}/orders/my-orders`,
+            all: `${API_URL}/orders`,
+            updateStatus: (id) => `${API_URL}/orders/${id}/status`,
+            cancel: (id) => `${API_URL}/orders/${id}/cancel`,
+            confirmPayment: (id) => `${API_URL}/orders/${id}/confirm-payment`,
         },
     },
     getAuthHeader: () => {

@@ -225,13 +225,10 @@ const Cart = () => {
                                 <Typography variant="h6">${calculateTotal().toFixed(2)}</Typography>
                             </Box>
                             <Button
-                                fullWidth
                                 variant="contained"
-                                size="large"
-                                sx={{
-                                    py: 2,
-                                    letterSpacing: '0.1em'
-                                }}
+                                fullWidth
+                                sx={{ mt: 3, py: 1.5 }}
+                                onClick={() => navigate('/checkout')}
                             >
                                 PROCEED TO CHECKOUT
                             </Button>

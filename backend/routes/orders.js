@@ -8,11 +8,15 @@ const admin = require('../middleware/admin');
 // Create order
 router.post('/', auth, async (req, res) => {
   try {
-    const { items, shippingAddress } = req.body;
+    const { items, shippingAddress, paymentMethod, transactionId } = req.body;
     
     // Validate products and calculate total
-    let totalAmount = 0;
+    let subtotal = 0;
     const orderItems = [];
+
+    if (!['upi', 'cod'].includes(paymentMethod)) {
+      return res.status(400).json({ message: 'Invalid payment method' });
+    }
 
     for (const item of items) {
       const product = await Product.findById(item.productId);
@@ -26,18 +30,25 @@ router.post('/', auth, async (req, res) => {
         price: product.price
       });
       
-      totalAmount += product.price * item.quantity;
+      subtotal += product.price * item.quantity;
       
       // Update stock
       product.stock -= item.quantity;
       await product.save();
     }
 
+    const DELIVERY_CHARGE = 10;
+    const discount = paymentMethod === 'upi' ? 0.05 * subtotal : 0;
+    const totalAmount = subtotal - discount + DELIVERY_CHARGE;
+
     const order = new Order({
       user: req.user._id,
       items: orderItems,
       totalAmount,
-      shippingAddress
+      shippingAddress,
+      paymentMethod,
+      transactionId: paymentMethod === 'upi' ? transactionId : undefined,
+      paymentStatus: paymentMethod === 'upi' ? 'pending' : 'confirmed',
     });
 
     await order.save();
@@ -89,6 +100,40 @@ router.patch('/:id/status', [auth, admin], async (req, res) => {
     res.json(order);
   } catch (error) {
     res.status(500).json({ message: 'Error updating order status' });
+  }
+});
+
+// Cancel order (user)
+router.patch('/:id/cancel', auth, async (req, res) => {
+  try {
+    const order = await Order.findOne({ _id: req.params.id, user: req.user._id });
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    if (['shipped', 'delivered'].includes(order.status)) {
+      return res.status(400).json({ message: 'Order cannot be cancelled at this stage' });
+    }
+    order.status = 'cancelled';
+    await order.save();
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ message: 'Error cancelling order' });
+  }
+});
+
+// Confirm UPI payment (admin)
+router.patch('/:id/confirm-payment', [auth, admin], async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    if (order.paymentMethod !== 'upi') {
+      return res.status(400).json({ message: 'Not a UPI order' });
+    }
+    order.paymentStatus = 'confirmed';
+    // once confirmed move status to processing if still pending
+    if (order.status === 'pending') order.status = 'processing';
+    await order.save();
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ message: 'Error confirming payment' });
   }
 });
 

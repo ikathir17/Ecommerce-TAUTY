@@ -42,6 +42,7 @@ const Admin = () => {
         price: '',
         category: '',
         stock: '',
+        keywords: '',
         image: null
     });
 
@@ -157,24 +158,37 @@ const Admin = () => {
             return;
         }
 
-        if (!formData.image?.data) {
+        if (!editingProduct && !formData.image?.data) {
             setError('Please select an image');
             return;
         }
 
         try {
-            const dataToSend = {
+            const baseData = {
                 name: formData.name,
                 description: formData.description,
                 price: parseFloat(formData.price) || 0,
                 category: formData.category,
                 stock: parseInt(formData.stock, 10) || 0,
-                image: {
-                    data: formData.image.data,
-                    contentType: formData.image.contentType,
-                    alt: formData.name
-                }
             };
+
+            const keywordsArray = formData.keywords
+                .split(',')
+                .map((k) => k.trim())
+                .filter(Boolean);
+
+            const baseWithKeywords = { ...baseData, keywords: keywordsArray };
+
+            const dataToSend = formData.image?.data
+                ? {
+                      ...baseWithKeywords,
+                      image: {
+                          data: formData.image.data,
+                          contentType: formData.image.contentType,
+                          alt: formData.name,
+                      },
+                  }
+                : baseWithKeywords;
 
             // Validate data before sending
             if (isNaN(dataToSend.price) || dataToSend.price <= 0) {
@@ -199,6 +213,7 @@ const Admin = () => {
                 price: '',
                 category: 'men',
                 stock: '0',
+                keywords: '',
                 image: null
             });
             setError(null);
@@ -231,6 +246,7 @@ const Admin = () => {
             price: product.price,
             category: product.category,
             stock: product.stock,
+            keywords: product.keywords?.join(', '),
             image: null
         });
         setOpenDialog(true);
@@ -360,6 +376,14 @@ const Admin = () => {
                                         >
                                             ${product.price} · {product.stock} in stock
                                         </Typography>
+                                        <Typography 
+                                            variant="body2" 
+                                            sx={{ 
+                                                fontWeight: 300
+                                            }}
+                                        >
+                                            Keywords: {product.keywords?.join(', ') || ''}
+                                        </Typography>
                                     </Box>
                                 </CardContent>
                             </Card>
@@ -385,6 +409,7 @@ const Admin = () => {
                         price: '',
                         category: '',
                         stock: '',
+                        keywords: '',
                         image: null
                     });
                 }}>
@@ -448,6 +473,13 @@ const Admin = () => {
                                     required
                                     fullWidth
                                 />
+                                <TextField
+                                    name="keywords"
+                                    label="Keywords (comma separated)"
+                                    value={formData.keywords}
+                                    onChange={handleInputChange}
+                                    fullWidth
+                                />
                                 <input
                                     accept="image/*"
                                     type="file"
@@ -467,6 +499,7 @@ const Admin = () => {
                                     price: '',
                                     category: '',
                                     stock: '',
+                                    keywords: '',
                                     image: null
                                 });
                             }}>

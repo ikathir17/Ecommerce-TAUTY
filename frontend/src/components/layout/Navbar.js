@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { NAVBAR_HEIGHT } from '../../styles/constants';
 import { Link as RouterLink } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import SearchBar from '../SearchBar';
 import {
     AppBar,
     Toolbar,
@@ -31,6 +33,7 @@ const Navbar = () => {
     }, []);
     const { user, logout } = useAuth();
     const { getCartCount } = useCart();
+    const navigate = useNavigate();
 
     return (
         <AppBar 
@@ -110,6 +113,20 @@ const Navbar = () => {
                                 <CartIcon />
                             </Badge>
                         </IconButton>
+
+                        {user && (
+                            <Button
+                                component={RouterLink}
+                                to="/orders"
+                                color="inherit"
+                            >
+                                Orders
+                            </Button>
+                        )}
+
+                        <Box sx={{ flexGrow: 1, mx: 2 }}>
+                            <SearchBar onSearch={(q) => navigate(q ? `/?search=${encodeURIComponent(q)}` : '/')} />
+                        </Box>
 
                         {user ? (
                             <Button

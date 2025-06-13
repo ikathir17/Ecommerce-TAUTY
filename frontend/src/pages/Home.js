@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Box, Typography } from '@mui/material';
 import ProductList from '../components/product/ProductList';
 import { productService } from '../services/productService';
+import { useSearchParams } from 'react-router-dom';
 
 // Fisher-Yates shuffle algorithm
 const shuffleArray = (array) => {
@@ -17,11 +18,13 @@ const Home = () => {
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [searchParams] = useSearchParams();
 
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                const data = await productService.getAllProducts();
+                const q = searchParams.get('search') || '';
+                const data = await productService.getAllProducts(q);
                 setProducts(shuffleArray(data));
             } catch (err) {
                 setError('Failed to load products');
@@ -32,7 +35,7 @@ const Home = () => {
         };
 
         fetchProducts();
-    }, []);
+    }, [searchParams]);
 
     if (loading) {
         return (
