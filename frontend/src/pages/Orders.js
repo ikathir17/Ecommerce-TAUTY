@@ -16,22 +16,142 @@ import {
     Button,
     FormControl,
     InputLabel,
+    Grid,
 } from '@mui/material';
 import { orderService } from '../services/orderService';
 import { useAuth } from '../contexts/AuthContext';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { Link } from '@mui/material';
 import Snackbar from '@mui/material/Snackbar';
 import MuiAlert from '@mui/material/Alert';
-import { useLocation } from 'react-router-dom';
+import { useSnackbar } from 'notistack';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+const PIE_COLORS = ['#4285F4', '#EA4335', '#9C27B0', '#34A853', '#FBBC05'];
+const BAR_COLORS = ['#A8E6CF', '#9C27B0', '#6A1B9A', '#D32F2F'];
+
+// Order statistics component
+const OrderStats = ({ orders }) => {
+    // Count orders by status
+    const statusCounts = orders.reduce((acc, order) => {
+        acc[order.status] = (acc[order.status] || 0) + 1;
+        return acc;
+    }, {});
+
+    // Prepare data for the pie chart
+    const pieData = Object.entries(statusCounts).map(([name, value]) => ({
+        name: name.charAt(0).toUpperCase() + name.slice(1),
+        value
+    }));
+
+    // Prepare data for the bar chart
+    const barData = Object.entries(statusCounts).map(([name, value]) => ({
+        name: name.charAt(0).toUpperCase() + name.slice(1),
+        orders: value
+    }));
+
+    return (
+        <Box sx={{ 
+            mt: 4, 
+            mb: 4,
+            px: { xs: 2, md: 0 },
+            py: { xs: 2, md: 4 },
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            width: '100%'
+        }}>
+            <Typography variant="h5" gutterBottom sx={{ textAlign: 'center' }}>Order Statistics</Typography>
+            <Grid container spacing={3} justifyContent="center">
+                {/* Pie Chart */}
+                <Grid item xs={12} md={12} sx={{ maxWidth: 1000 }}>
+                    <Paper 
+                        elevation={3} 
+                        sx={{ 
+                            p: 2, 
+                            height: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center'
+                        }}>
+                        <Typography variant="h6" align="center" gutterBottom>
+                            Order Status Distribution
+                        </Typography>
+                        <ResponsiveContainer width="100%" height={500}>
+                            <PieChart>
+                                <Pie
+                                    data={pieData}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    outerRadius={180}
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                    label={({ name, percent }) => 
+                                        `${name}: ${(percent * 100).toFixed(0)}%`
+                                    }
+                                >
+                                    {pieData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip formatter={(value) => [`${value} orders`, 'Count']} />
+                                <Legend />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </Paper>
+                </Grid>
+
+                {/* Bar Chart */}
+                <Grid item xs={12} md={12} sx={{ maxWidth: 1000 }}>
+                    <Paper 
+                        elevation={3} 
+                        sx={{ 
+                            p: 2, 
+                            height: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center'
+                        }}>
+                        <Typography variant="h6" align="center" gutterBottom>
+                            Orders by Status
+                        </Typography>
+                        <ResponsiveContainer width="100%" height={500}>
+                            <BarChart data={barData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" />
+                                <YAxis />
+                                <Tooltip formatter={(value) => [value, 'Number of Orders']} />
+                                <Legend />
+                                <Bar dataKey="orders" name="Orders">
+                                    {barData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </Paper>
+                </Grid>
+            </Grid>
+        </Box>
+    );
+};
 
 const statusOptions = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+
+const Alert = React.forwardRef(function Alert(props, ref) {
+    return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
+});
 
 const Orders = () => {
     const { user } = useAuth();
     const location = useLocation();
+    const navigate = useNavigate();
+    const { enqueueSnackbar } = useSnackbar();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [updatingStatus, setUpdatingStatus] = useState({});
+    const [cancellingOrder, setCancellingOrder] = useState(null);
     const [error, setError] = useState(null);
     const [paymentFilter, setPaymentFilter] = useState('all');
     const [openSnack, setOpenSnack] = useState(Boolean(location.state?.success));
@@ -65,11 +185,113 @@ const Orders = () => {
 
     const handleStatusChange = async (orderId, newStatus) => {
         try {
+            setUpdatingStatus(prev => ({ ...prev, [orderId]: true }));
             await orderService.updateStatus(orderId, newStatus);
-            fetchOrders();
+            await fetchOrders();
+            enqueueSnackbar('Order status updated successfully', { variant: 'success' });
         } catch (err) {
             console.error('Error updating status:', err);
+            enqueueSnackbar(
+                err.response?.data?.message || 'Failed to update order status',
+                { variant: 'error' }
+            );
+        } finally {
+            setUpdatingStatus(prev => ({ ...prev, [orderId]: false }));
         }
+    };
+
+    const handleCancelOrder = async (orderId) => {
+        if (!window.confirm('Are you sure you want to cancel this order?')) {
+            return;
+        }
+        try {
+            setCancellingOrder(orderId);
+            await orderService.cancelOrder(orderId);
+            await fetchOrders();
+            enqueueSnackbar('Order cancelled successfully', { variant: 'success' });
+        } catch (err) {
+            console.error('Error cancelling order:', err);
+            enqueueSnackbar(
+                err.response?.data?.message || 'Failed to cancel order',
+                { variant: 'error' }
+            );
+        } finally {
+            setCancellingOrder(null);
+        }
+    };
+
+    const handleDownloadCsv = () => {
+        const headers = [
+            'Order ID',
+            'Customer Name',
+            'Customer Email',
+            'Order Date',
+            'Total Amount',
+            'Status',
+            'Payment Method',
+            'Transaction ID',
+            'Payment Status',
+            'Shipping Full Name',
+            'Shipping Phone',
+            'Shipping Alt Phone',
+            'Shipping Address Line 1',
+            'Shipping Address Line 2',
+            'Shipping Landmark',
+            'Shipping City',
+            'Shipping State',
+            'Shipping Postal Code',
+            'Shipping Country',
+            'Shipping Address Type',
+            'Shipping Delivery Instructions',
+            'Products'
+        ];
+
+        const rows = orders.map(order => {
+            const productsString = order.items.map(item => 
+                `${item.product.name} (x${item.quantity})`
+            ).join('; ');
+
+            return [
+                `"${order._id}"`,
+                `"${order.shippingAddress.fullName || 'N/A'}"`,
+                `"${order.user?.email || 'N/A'}"`,
+                `"${new Date(order.createdAt).toLocaleString()}"`,
+                `"${order.totalAmount.toFixed(2)}"`,
+                `"${order.status}"`,
+                `"${order.paymentMethod.toUpperCase()}"`,
+                `"${order.transactionId || 'N/A'}"`,
+                `"${order.paymentStatus || 'N/A'}"`,
+                `"${order.shippingAddress.fullName || 'N/A'}"`,
+                `"${order.shippingAddress.phone || 'N/A'}"`,
+                `"${order.shippingAddress.altPhone || 'N/A'}"`,
+                `"${order.shippingAddress.addressLine1 || 'N/A'}"`,
+                `"${order.shippingAddress.addressLine2 || ''}"`,
+                `"${order.shippingAddress.landmark || ''}"`,
+                `"${order.shippingAddress.city || 'N/A'}"`,
+                `"${order.shippingAddress.state || 'N/A'}"`,
+                `"${order.shippingAddress.postalCode || 'N/A'}"`,
+                `"${order.shippingAddress.country || 'N/A'}"`,
+                `"${order.shippingAddress.addressType ? (order.shippingAddress.addressType.charAt(0).toUpperCase() + order.shippingAddress.addressType.slice(1)) : 'N/A'}"`,
+                `"${order.shippingAddress.deliveryInstructions || ''}"`,
+                `"${productsString}"`
+            ];
+        });
+
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'orders.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        enqueueSnackbar('Orders data downloaded as CSV', { variant: 'success' });
     };
 
     const handleSnackClose = () => {
@@ -95,24 +317,40 @@ const Orders = () => {
     }
 
     return (
-        <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Container maxWidth={false} sx={{ py: 4 }}>
             <Typography variant="h4" gutterBottom>
                 {user.isAdmin ? 'All Orders' : 'My Orders'}
             </Typography>
+
+            {/* Order Statistics for Admin */}
+            {user.isAdmin && !loading && orders.length > 0 && (
+                <OrderStats orders={orders} />
+            )}
+
             {user.isAdmin && (
-                <FormControl sx={{ mb: 2, minWidth: 200 }} size="small">
-                    <InputLabel id="payment-filter-label">Payment Method</InputLabel>
-                    <Select
-                        labelId="payment-filter-label"
-                        value={paymentFilter}
-                        label="Payment Method"
-                        onChange={(e) => setPaymentFilter(e.target.value)}
+                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <FormControl sx={{ minWidth: 200 }} size="small">
+                        <InputLabel id="payment-filter-label">Payment Method</InputLabel>
+                        <Select
+                            labelId="payment-filter-label"
+                            value={paymentFilter}
+                            label="Payment Method"
+                            onChange={(e) => setPaymentFilter(e.target.value)}
+                        >
+                            <MenuItem value="all">All</MenuItem>
+                            <MenuItem value="upi">UPI</MenuItem>
+                            <MenuItem value="cod">Cash on Delivery</MenuItem>
+                        </Select>
+                    </FormControl>
+                    <Button 
+                        variant="contained" 
+                        color="primary" 
+                        onClick={handleDownloadCsv}
+                        sx={{ mt: { xs: 2, sm: 0 } }} 
                     >
-                        <MenuItem value="all">All</MenuItem>
-                        <MenuItem value="upi">UPI</MenuItem>
-                        <MenuItem value="cod">Cash on Delivery</MenuItem>
-                    </Select>
-                </FormControl>
+                        Download CSV
+                    </Button>
+                </Box>
             )}
             <TableContainer component={Paper}>
                 <Table>
@@ -122,6 +360,7 @@ const Orders = () => {
                             <TableCell>Date</TableCell>
                             <TableCell>Total Amount</TableCell>
                             <TableCell>Status</TableCell>
+                            {user.isAdmin && <TableCell>Customer</TableCell>}
                             {user.isAdmin && <TableCell>Payment</TableCell>}
                             {user.isAdmin && <TableCell>Address</TableCell>}
                             <TableCell>Items</TableCell>
@@ -132,11 +371,13 @@ const Orders = () => {
                     <TableBody>
                         {orders.map((order) => (
                             <TableRow key={order._id}>
-                                <TableCell>{order._id}</TableCell>
+                                <TableCell sx={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {order._id}
+                                </TableCell>
                                 <TableCell>
                                     {new Date(order.createdAt).toLocaleString()}
                                 </TableCell>
-                                <TableCell>${order.totalAmount.toFixed(2)}</TableCell>
+                                <TableCell>₹{order.totalAmount.toFixed(2)}</TableCell>
                                 <TableCell>
                                     {user.isAdmin ? (
                                         <Select
@@ -144,13 +385,22 @@ const Orders = () => {
                                             onChange={(e) =>
                                                 handleStatusChange(order._id, e.target.value)
                                             }
-                                            disabled={order.paymentMethod === 'upi' && order.paymentStatus === 'pending'}
+                                            disabled={
+                                                (order.paymentMethod === 'upi' && order.paymentStatus === 'pending') ||
+                                                updatingStatus[order._id]
+                                            }
+                                            size="small"
                                         >
                                             {statusOptions.map((status) => (
                                                 <MenuItem key={status} value={status}>
                                                     {status}
                                                 </MenuItem>
                                             ))}
+                                            {updatingStatus[order._id] && (
+                                                <MenuItem disabled>
+                                                    <CircularProgress size={20} />
+                                                </MenuItem>
+                                            )}
                                         </Select>
                                     ) : (
                                         order.paymentMethod === 'upi' && order.paymentStatus === 'pending'
@@ -160,12 +410,50 @@ const Orders = () => {
                                 </TableCell>
                                 {user.isAdmin && (
                                     <TableCell>
-                                        {order.paymentMethod.toUpperCase()} {order.paymentMethod === 'upi' && `- ${order.transactionId || 'N/A'}`}
+                                        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                            {order.shippingAddress.fullName || 'N/A'}
+                                        </Typography>
+                                        {order.user?.name && order.user.name !== order.shippingAddress.fullName && (
+                                            <Typography variant="caption" color="textSecondary">
+                                                ({order.user.name})
+                                            </Typography>
+                                        )}
+                                        <Typography variant="caption" color="textSecondary">
+                                            {order.user?.email || 'N/A'}
+                                        </Typography>
                                     </TableCell>
                                 )}
                                 {user.isAdmin && (
                                     <TableCell>
-                                        {order.shippingAddress.street}, {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zipCode}, {order.shippingAddress.country}
+                                        {order.paymentMethod.toUpperCase()} {order.paymentMethod === 'upi' && `- ${order.transactionId || 'N/A'}`}
+                                    </TableCell>
+                                )}
+                                {user.isAdmin && (
+                                    <TableCell sx={{ maxWidth: '300px' }}>
+                                        <div><strong>{order.shippingAddress.fullName}</strong></div>
+                                        <div>{order.shippingAddress.addressLine1}</div>
+                                        {order.shippingAddress.addressLine2 && (
+                                            <div>{order.shippingAddress.addressLine2}</div>
+                                        )}
+                                        <div>
+                                            {order.shippingAddress.city}, {order.shippingAddress.state} - {order.shippingAddress.postalCode}
+                                        </div>
+                                        <div>{order.shippingAddress.country}</div>
+                                        {order.shippingAddress.landmark && (
+                                            <div><em>Landmark: {order.shippingAddress.landmark}</em></div>
+                                        )}
+                                        <div>Phone: {order.shippingAddress.phone}</div>
+                                        {order.shippingAddress.altPhone && (
+                                            <div>Alt. Phone: {order.shippingAddress.altPhone}</div>
+                                        )}
+                                        {order.shippingAddress.addressType && (
+                                            <div>Address Type: {order.shippingAddress.addressType.charAt(0).toUpperCase() + order.shippingAddress.addressType.slice(1)}</div>
+                                        )}
+                                        {order.shippingAddress.deliveryInstructions && (
+                                            <div style={{ marginTop: '8px' }}>
+                                                <strong>Instructions:</strong> {order.shippingAddress.deliveryInstructions}
+                                            </div>
+                                        )}
                                     </TableCell>
                                 )}
                                 <TableCell>
@@ -185,9 +473,11 @@ const Orders = () => {
                                             <Button
                                                 size="small"
                                                 color="error"
-                                                onClick={() => orderService.cancelOrder(order._id).then(fetchOrders)}
+                                                onClick={() => handleCancelOrder(order._id)}
+                                                disabled={cancellingOrder === order._id}
+                                                startIcon={cancellingOrder === order._id ? <CircularProgress size={20} /> : null}
                                             >
-                                                Cancel
+                                                {cancellingOrder === order._id ? 'Cancelling...' : 'Cancel'}
                                             </Button>
                                         )}
                                     </TableCell>
@@ -204,8 +494,19 @@ const Orders = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
-            <Snackbar open={openSnack} autoHideDuration={6000} onClose={handleSnackClose} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
-                <MuiAlert onClose={handleSnackClose} severity="success" sx={{ width: '100%' }} elevation={6} variant="filled">
+            <Snackbar 
+                open={openSnack} 
+                autoHideDuration={6000} 
+                onClose={handleSnackClose} 
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <MuiAlert 
+                    onClose={handleSnackClose} 
+                    severity="success" 
+                    sx={{ width: '100%' }} 
+                    elevation={6} 
+                    variant="filled"
+                >
                     {successMessage}
                 </MuiAlert>
             </Snackbar>

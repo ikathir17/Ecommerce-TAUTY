@@ -83,6 +83,24 @@ router.get('/', [auth, admin], async (req, res) => {
   }
 });
 
+// Check if user has purchased a specific product
+router.get('/check-purchase/:productId', auth, async (req, res) => {
+  try {
+    const { productId } = req.params;
+    
+    const order = await Order.findOne({
+      user: req.user._id,
+      status: 'delivered',
+      'items.product': productId
+    });
+    
+    res.json({ hasPurchased: !!order });
+  } catch (error) {
+    console.error('Error checking purchase status:', error);
+    res.status(500).json({ message: 'Error checking purchase status' });
+  }
+});
+
 // Update order status (admin only)
 router.patch('/:id/status', [auth, admin], async (req, res) => {
   try {

@@ -13,8 +13,25 @@ export const productService = {
     },
 
     async getProduct(id) {
-        const response = await axios.get(config.endpoints.products.single(id));
-        return response.data;
+        const productResponse = await axios.get(config.endpoints.products.single(id));
+        const product = productResponse.data;
+
+        // Fetch ratings for the product
+        let ratings = [];
+        try {
+            const ratingsResponse = await axios.get(`${config.apiUrl}/ratings/product/${id}`);
+            if (Array.isArray(ratingsResponse.data)) {
+                ratings = ratingsResponse.data;
+            } else if (ratingsResponse.data && Array.isArray(ratingsResponse.data.ratings)) { // Handle cases where response might be { ratings: [] }
+                ratings = ratingsResponse.data.ratings;
+            }
+        } catch (error) {
+            console.error('Error fetching product ratings:', error);
+            // If there's an error fetching ratings, default to an empty array
+            ratings = [];
+        }
+
+        return { ...product, ratings };
     },
 
     // Admin functions

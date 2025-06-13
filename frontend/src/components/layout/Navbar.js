@@ -94,6 +94,16 @@ const Navbar = () => {
                             Women
                         </Button>
 
+                        {user && !user.isAdmin && (
+                            <Button
+                                component={RouterLink}
+                                to="/orders"
+                                color="inherit"
+                            >
+                                Orders
+                            </Button>
+                        )}
+
                         {user && user.role === 'admin' && (
                             <Button
                                 color="inherit"
@@ -113,16 +123,6 @@ const Navbar = () => {
                                 <CartIcon />
                             </Badge>
                         </IconButton>
-
-                        {user && (
-                            <Button
-                                component={RouterLink}
-                                to="/orders"
-                                color="inherit"
-                            >
-                                Orders
-                            </Button>
-                        )}
 
                         <Box sx={{ flexGrow: 1, mx: 2 }}>
                             <SearchBar onSearch={(q) => navigate(q ? `/?search=${encodeURIComponent(q)}` : '/')} />

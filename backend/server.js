@@ -7,13 +7,20 @@ const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/products');
 const cartRoutes = require('./routes/cart');
 const orderRoutes = require('./routes/orders');
+const ratingRoutes = require('./routes/ratings');
 
 dotenv.config();
 
 const app = express();
 
+// CORS configuration
+const corsOptions = {
+  origin: 'http://localhost:3000', // Your frontend URL
+  optionsSuccessStatus: 200
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 
 // Increase payload size limit for base64 images
 app.use(express.json({ limit: '10mb' }));
@@ -29,8 +36,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/ratings', ratingRoutes);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5003;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

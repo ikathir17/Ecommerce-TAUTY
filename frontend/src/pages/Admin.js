@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
+import { 
     Container,
     Box,
     Typography,
@@ -18,10 +18,126 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
+    Paper,
+    Divider,
+    useTheme,
+    useMediaQuery,
+    Tabs,
+    Tab
 } from '@mui/material';
-import { Delete as DeleteIcon, Edit as EditIcon } from '@mui/icons-material';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { CircularProgress } from '@mui/material';
 import { config } from '../services/config';
 import { productService } from '../services/productService';
+import { orderService } from '../services/orderService';
+import { Link as RouterLink } from 'react-router-dom';
+
+// Colors for the pie chart
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
+// Order statistics component
+const OrderStats = ({ orders }) => {
+    // Count orders by status
+    const statusCounts = orders.reduce((acc, order) => {
+        acc[order.status] = (acc[order.status] || 0) + 1;
+        return acc;
+    }, {});
+
+    // Prepare data for the pie chart
+    const pieData = Object.entries(statusCounts).map(([name, value]) => ({
+        name: name.charAt(0).toUpperCase() + name.slice(1),
+        value
+    }));
+
+    // Prepare data for the bar chart
+    const barData = Object.entries(statusCounts).map(([name, value]) => ({
+        name: name.charAt(0).toUpperCase() + name.slice(1),
+        orders: value
+    }));
+
+    return (
+        <Box sx={{ 
+            mt: 4, 
+            mb: 4,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            width: '100%'
+        }}>
+            <Typography variant="h5" gutterBottom sx={{ textAlign: 'center' }}>Order Statistics</Typography>
+            <Grid container spacing={3} justifyContent="center">
+                {/* Pie Chart */}
+                <Grid item xs={12} md={6} sx={{ maxWidth: 600 }}>
+                    <Paper 
+                        elevation={3} 
+                        sx={{ 
+                            p: 2, 
+                            height: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center'
+                        }}>
+                        <Typography variant="h6" align="center" gutterBottom>
+                            Order Status Distribution
+                        </Typography>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <PieChart>
+                                <Pie
+                                    data={pieData}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    outerRadius={80}
+                                    fill="#8884d8"
+                                    dataKey="value"
+                                    label={({ name, percent }) => 
+                                        `${name}: ${(percent * 100).toFixed(0)}%`
+                                    }
+                                >
+                                    {pieData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip formatter={(value) => [`${value} orders`, 'Count']} />
+                                <Legend />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </Paper>
+                </Grid>
+
+                {/* Bar Chart */}
+                <Grid item xs={12} md={6} sx={{ maxWidth: 600 }}>
+                    <Paper 
+                        elevation={3} 
+                        sx={{ 
+                            p: 2, 
+                            height: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center'
+                        }}>
+                        <Typography variant="h6" align="center" gutterBottom>
+                            Orders by Status
+                        </Typography>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={barData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="name" />
+                                <YAxis />
+                                <Tooltip formatter={(value) => [value, 'Number of Orders']} />
+                                <Legend />
+                                <Bar dataKey="orders" fill="#8884d8" name="Orders" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </Paper>
+                </Grid>
+            </Grid>
+        </Box>
+    );
+};
 
 const DEFAULT_IMAGE = 'https://via.placeholder.com/400x600/f5f5f5/666666?text=No+Image';
 
@@ -30,6 +146,10 @@ const ADMIN_IMAGE_HEIGHT = 300;
 const IMAGE_ASPECT_RATIO = 3/4; // 4:3 aspect ratio
 
 const Admin = () => {
+    const [orders, setOrders] = useState([]);
+    const [carts, setCarts] = useState([]);
+    const [loadingOrders, setLoadingOrders] = useState(false);
+    const [loadingCarts, setLoadingCarts] = useState(false);
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -58,8 +178,22 @@ const Admin = () => {
         }
     };
 
+    const fetchOrders = async () => {
+        setLoadingOrders(true);
+        try {
+            const data = await orderService.getAllOrders();
+            setOrders(data);
+        } catch (err) {
+            setError('Failed to fetch orders');
+            console.error('Error fetching orders:', err);
+        } finally {
+            setLoadingOrders(false);
+        }
+    };
+
     useEffect(() => {
         fetchProducts();
+        fetchOrders();
     }, []);
 
     const handleInputChange = (e) => {
@@ -255,12 +389,24 @@ const Admin = () => {
     return (
         <Container maxWidth="xl">
             <Box sx={{ py: 8 }}>
+                {loadingOrders && (
+                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                        <Typography>Loading order statistics...</Typography>
+                    </Box>
+                )}
+                {error && (
+                    <Typography color="error" sx={{ textAlign: 'center', py: 2 }}>
+                        {error}
+                    </Typography>
+                )}
+                
                 <Box sx={{ 
                     display: 'flex', 
                     flexDirection: 'column', 
                     alignItems: 'center',
                     gap: 4, 
-                    mb: 8 
+                    mb: 8,
+                    mt: 4
                 }}>
                     <Typography 
                         variant="h4" 
@@ -271,21 +417,44 @@ const Admin = () => {
                             letterSpacing: '0.1em'
                         }}
                     >
-                        PRODUCT MANAGEMENT
+                        ADMIN DASHBOARD
                     </Typography>
-                    <Button
-                        variant="contained"
-                        onClick={() => setOpenDialog(true)}
-                        sx={{
-                            minWidth: '250px',
-                            py: 2,
-                            letterSpacing: '0.1em',
-                            fontSize: '0.9rem',
-                            fontWeight: 400
-                        }}
-                    >
-                        + Add New Product
-                    </Button>
+                    
+                    <Box sx={{ 
+                        display: 'flex', 
+                        gap: 2,
+                        flexWrap: 'wrap',
+                        justifyContent: 'center'
+                    }}>
+                        <Button
+                            variant="contained"
+                            component={RouterLink}
+                            to="/orders"
+                            sx={{
+                                minWidth: '200px',
+                                py: 2,
+                                letterSpacing: '0.1em',
+                                fontSize: '0.9rem',
+                                fontWeight: 400
+                            }}
+                        >
+                            Manage Orders
+                        </Button>
+                        
+                        <Button
+                            variant="contained"
+                            onClick={() => setOpenDialog(true)}
+                            sx={{
+                                minWidth: '200px',
+                                py: 2,
+                                letterSpacing: '0.1em',
+                                fontSize: '0.9rem',
+                                fontWeight: 400
+                            }}
+                        >
+                            + Add New Product
+                        </Button>
+                    </Box>
                 </Box>
 
                 {error && (

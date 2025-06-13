@@ -16,6 +16,7 @@ import Cart from './pages/Cart';
 import Orders from './pages/Orders';
 import Checkout from './pages/Checkout';
 import ProtectedRoute from './components/ProtectedRoute';
+import { SnackbarProvider } from 'notistack';
 
 // Create a theme instance
 const theme = createTheme({
@@ -39,6 +40,18 @@ const theme = createTheme({
     text: {
       primary: '#000000',
       secondary: '#757575',
+    },
+    success: {
+      main: '#4CAF50',
+    },
+    error: {
+      main: '#D32F2F',
+    },
+    warning: {
+      main: '#FFC107',
+    },
+    info: {
+      main: '#2196F3',
     },
   },
   typography: {
@@ -114,34 +127,34 @@ const theme = createTheme({
   },
 });
 
-
-
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
         <CartProvider>
-          <Router>
-            <Navbar />
-            <Box sx={{ mt: `${NAVBAR_HEIGHT}px` }}>
-              <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/admin" element={
-              <ProtectedRoute adminOnly>
-                <Admin />
-              </ProtectedRoute>
-            } />
-            <Route path="/:category" element={<CategoryPage />} />
-            <Route path="/product/:id" element={<ProductDetail />} />
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-            <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
-              {/* Add more routes as we create the components */}
-              </Routes>
-            </Box>
-          </Router>
+          <SnackbarProvider maxSnack={3} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
+            <Router>
+              <Navbar />
+              <Box sx={{ mt: `${NAVBAR_HEIGHT}px` }}>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/admin" element={
+                    <ProtectedRoute adminOnly>
+                      <Admin />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/:category" element={<CategoryPage />} />
+                  <Route path="/product/:id" element={<ProductDetail />} />
+                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+                  <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+                  {/* Add more routes as we create the components */}
+                </Routes>
+              </Box>
+            </Router>
+          </SnackbarProvider>
           <Footer />
         </CartProvider>
       </AuthProvider>

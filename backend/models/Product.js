@@ -13,6 +13,17 @@ const productSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  rating: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 5,
+    set: v => parseFloat(v).toFixed(1)
+  },
+  ratingCount: {
+    type: Number,
+    default: 0
+  },
   category: {
     type: String,
     enum: ['men', 'women'],

@@ -43,11 +43,18 @@ const orderSchema = new mongoose.Schema({
     default: 'confirmed',
   },
   shippingAddress: {
-    street: String,
-    city: String,
-    state: String,
-    zipCode: String,
-    country: String,
+    fullName: { type: String, required: true },
+    phone: { type: String, required: true },
+    altPhone: String,
+    addressLine1: { type: String, required: true },
+    addressLine2: String,
+    landmark: String,
+    city: { type: String, required: true },
+    state: { type: String, required: true },
+    postalCode: { type: String, required: true },
+    country: { type: String, required: true },
+    addressType: { type: String, enum: ['home', 'office', 'other'], default: 'home' },
+    deliveryInstructions: String,
   },
 }, { timestamps: true });
 
