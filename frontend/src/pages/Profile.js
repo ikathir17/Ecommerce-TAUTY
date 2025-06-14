@@ -59,14 +59,7 @@ function a11yProps(index) {
 // Profile validation schema
 const profileSchema = Yup.object().shape({
   name: Yup.string().required('Name is required'),
-  email: Yup.string().email('Invalid email').required('Email is required'),
-  phone: Yup.string()
-    .matches(
-      /^[+]?[(]?[0-9]{1,4}[)]?[-\s\./0-9]*$/,
-      'Phone number is not valid'
-    )
-    .nullable()
-    .transform((value) => (value === '' ? null : value)),
+  email: Yup.string().email('Invalid email').required('Email is required')
 });
 
 // Password validation schema
@@ -105,7 +98,7 @@ const Profile = () => {
         // Initialize form with user data
         profileForm.setValues({
           name: userData.name || '',
-          email: userData.email || '',
+          email: userData.email || ''
         });
       } catch (err) {
         console.error('Profile load error:', err);
@@ -123,8 +116,7 @@ const Profile = () => {
     enableReinitialize: true,
     initialValues: {
       name: user?.name || '',
-      email: user?.email || '',
-      phone: user?.phone || '',
+      email: user?.email || ''
     },
     validationSchema: profileSchema,
     onSubmit: async (values, { setSubmitting, setFieldError }) => {
@@ -194,25 +186,32 @@ const Profile = () => {
 
   const handleCancelEdit = () => {
     setIsEditing(false);
-    profileForm.resetForm();
+    profileForm.resetForm({
+      values: {
+        name: user?.name || '',
+        email: user?.email || ''
+      }
+    });
   };
 
   const handleProfileSubmit = async (values, { setSubmitting }) => {
     try {
-      await userService.updateProfile(values);
+      const updatedUser = await userService.updateProfile(values);
+      setUser(updatedUser);  // Update the user state with the returned data
       setSuccess('Profile updated successfully');
-      const updatedUser = await userService.getProfile();
-      setUser(updatedUser);
       setIsEditing(false);
     } catch (err) {
       const error = err.response?.data?.msg || 'Failed to update profile';
       setError(error);
+      if (err.response?.data?.errors) {
+        err.response.data.errors.forEach((e) => {
+          profileForm.setFieldError(e.param, e.msg);
+        });
+      }
     } finally {
       setSubmitting(false);
     }
   };
-
-  profileForm.handleSubmit = handleProfileSubmit;
 
   if (loading) {
     return (
@@ -313,22 +312,7 @@ const Profile = () => {
                       margin="normal"
                     />
                   </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      id="phone"
-                      name="phone"
-                      label="Phone Number"
-                      type="tel"
-                      placeholder="e.g. +1234567890"
-                      value={profileForm.values.phone || ''}
-                      onChange={profileForm.handleChange}
-                      onBlur={profileForm.handleBlur}
-                      error={profileForm.touched.phone && Boolean(profileForm.errors.phone)}
-                      helperText={profileForm.touched.phone && profileForm.errors.phone}
-                      margin="normal"
-                    />
-                  </Grid>
+
                 </Grid>
                 <Box mt={3} display="flex" justifyContent="flex-end" gap={2}>
                   <Button
@@ -370,14 +354,7 @@ const Profile = () => {
                       {user?.email}
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} md={6}>
-                    <Typography variant="subtitle2" color="text.secondary">
-                      Phone Number
-                    </Typography>
-                    <Typography variant="body1" paragraph>
-                      {user?.phone || 'Not provided'}
-                    </Typography>
-                  </Grid>
+
                 </Grid>
               </Box>
             )}

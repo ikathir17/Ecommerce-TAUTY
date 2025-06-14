@@ -30,24 +30,23 @@ router.put(
         [
             body('name', 'Name is required').not().isEmpty(),
             body('email', 'Please include a valid email').isEmail(),
-            body('phone', 'Please include a valid phone number').optional().matches(
-              /^[+]?[(]?[0-9]{1,4}[)]?[-\s\./0-9]*$/,
-              'Phone number is not valid'
-            ),
         ],
     ],
     async (req, res) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
+            console.log('Validation errors:', errors.array());
             return res.status(400).json({ errors: errors.array() });
         }
 
         const { name, email, phone } = req.body;
+        console.log('Updating user with data:', { name, email, phone });
 
         try {
             let user = await User.findById(req.user.id);
 
             if (!user) {
+                console.log('User not found with id:', req.user.id);
                 return res.status(404).json({ msg: 'User not found' });
             }
 
@@ -55,23 +54,22 @@ router.put(
             if (email !== user.email) {
                 const existingUser = await User.findOne({ email });
                 if (existingUser) {
+                    console.log('Email already in use:', email);
                     return res.status(400).json({ msg: 'Email already in use' });
                 }
             }
 
-
             // Update user
             user.name = name;
             user.email = email;
-            user.phone = phone || null;
 
+            console.log('Saving user with data:', user);
             await user.save();
 
-            // Remove password from response
-            user = user.toObject();
-            delete user.password;
-
-            res.json(user);
+            // Get fresh user data without password
+            const updatedUser = await User.findById(req.user.id).select('-password');
+            console.log('Successfully updated user:', updatedUser);
+            res.json(updatedUser);
         } catch (err) {
             console.error(err.message);
             res.status(500).send('Server Error');

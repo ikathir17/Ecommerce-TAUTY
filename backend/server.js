@@ -40,7 +40,33 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/ratings', ratingRoutes);
 app.use('/api/user', userRoutes);
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error stack:', err.stack);
+  console.error('Error details:', {
+    message: err.message,
+    name: err.name,
+    ...err
+  });
+  
+  res.status(500).json({
+    msg: 'Server Error',
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+  });
+});
+
+// Handle 404
+app.use((req, res) => {
+  res.status(404).json({ msg: 'Not Found' });
+});
+
 const PORT = process.env.PORT || 5003;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled Rejection:', err);
+  server.close(() => process.exit(1));
 });
