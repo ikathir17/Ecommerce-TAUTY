@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:5003';
+const BASE_URL = 'https://ecommerce-tauty-backend.onrender.com';
 const API_URL = `${BASE_URL}/api`;
 
 export const config = {
