@@ -8,6 +8,7 @@ const productRoutes = require('./routes/products');
 const cartRoutes = require('./routes/cart');
 const orderRoutes = require('./routes/orders');
 const ratingRoutes = require('./routes/ratings');
+const userRoutes = require('./routes/user');
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/ratings', ratingRoutes);
+app.use('/api/user', userRoutes);
 
 const PORT = process.env.PORT || 5003;
 app.listen(PORT, () => {

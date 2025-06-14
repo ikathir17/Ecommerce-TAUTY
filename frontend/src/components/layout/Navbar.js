@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { NAVBAR_HEIGHT } from '../../styles/constants';
-import { Link as RouterLink } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import SearchBar from '../SearchBar';
 import {
     AppBar,
@@ -12,16 +11,31 @@ import {
     Badge,
     Box,
     Container,
+    Menu,
+    MenuItem,
+    ListItemIcon,
+    Divider,
+    Avatar,
 } from '@mui/material';
 import {
     ShoppingCart as CartIcon,
     Person as PersonIcon,
+    AccountCircle as AccountCircleIcon,
+    ExitToApp as LogoutIcon,
+    PersonOutline as ProfileIcon,
+    AdminPanelSettings as AdminIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
 
 const Navbar = () => {
     const [isScrolled, setIsScrolled] = useState(false);
+    const [anchorEl, setAnchorEl] = useState(null);
+    const menuRef = useRef(null);
+    const { user, logout } = useAuth();
+    const { getCartCount } = useCart();
+    const navigate = useNavigate();
+    const open = Boolean(anchorEl);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -31,9 +45,29 @@ const Navbar = () => {
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
-    const { user, logout } = useAuth();
-    const { getCartCount } = useCart();
-    const navigate = useNavigate();
+
+    const handleMenuOpen = (event) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleMenuClose = () => {
+        setAnchorEl(null);
+    };
+
+    const handleProfileClick = () => {
+        handleMenuClose();
+        navigate('/profile');
+    };
+
+    const handleLogout = () => {
+        handleMenuClose();
+        logout();
+    };
+
+    const handleAdminClick = () => {
+        handleMenuClose();
+        navigate('/admin');
+    };
 
     return (
         <AppBar 
@@ -71,11 +105,12 @@ const Navbar = () => {
                         TAUTY
                     </Typography>
 
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1, justifyContent: 'flex-end' }}>
                         <Button
                             color="inherit"
                             component={RouterLink}
                             to="/"
+                            sx={{ minWidth: 'auto', px: 2 }}
                         >
                             Home
                         </Button>
@@ -83,6 +118,7 @@ const Navbar = () => {
                             color="inherit"
                             component={RouterLink}
                             to="/men"
+                            sx={{ minWidth: 'auto', px: 2 }}
                         >
                             Men
                         </Button>
@@ -90,68 +126,137 @@ const Navbar = () => {
                             color="inherit"
                             component={RouterLink}
                             to="/women"
+                            sx={{ minWidth: 'auto', px: 2 }}
                         >
                             Women
                         </Button>
-
-                        {user && !user.isAdmin && (
+                        
+                        {user && user.role !== 'admin' && (
                             <Button
                                 component={RouterLink}
                                 to="/orders"
                                 color="inherit"
+                                sx={{ minWidth: 'auto', px: 2 }}
                             >
                                 Orders
                             </Button>
                         )}
-
-                        {user && user.role === 'admin' && (
-                            <Button
-                                color="inherit"
-                                component={RouterLink}
-                                to="/admin"
-                            >
-                                Admin
-                            </Button>
-                        )}
-
+                        
                         <IconButton
                             color="inherit"
                             component={RouterLink}
                             to="/cart"
+                            sx={{ minWidth: '48px', height: '48px' }}
                         >
                             <Badge badgeContent={getCartCount()} color="error">
                                 <CartIcon />
                             </Badge>
                         </IconButton>
-
-                        <Box sx={{ flexGrow: 1, mx: 2 }}>
+                        
+                        <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
                             <SearchBar onSearch={(q) => navigate(q ? `/?search=${encodeURIComponent(q)}` : '/')} />
                         </Box>
-
-                        {user ? (
-                            <Button
-                                color="inherit"
-                                onClick={logout}
-                            >
-                                Logout
-                            </Button>
-                        ) : (
+                        
+                        {user?.role === 'admin' && (
                             <Button
                                 color="inherit"
                                 component={RouterLink}
-                                to="/auth"
-                                sx={{
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '0.1em',
-                                    fontWeight: 400,
-                                    fontSize: '0.875rem',
-                                    '&:hover': {
-                                        backgroundColor: 'transparent',
-                                        opacity: 0.7
-                                    }
-                                }}
+                                to="/admin"
+                                sx={{ minWidth: 'auto', px: 2 }}
                             >
-                                <PersonIcon />
+                                Admin
+                            </Button>
+                        )}
+                        
+                        {user ? (
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <IconButton
+                                    onClick={handleMenuOpen}
+                                    size="small"
+                                    sx={{ ml: 1 }}
+                                    aria-controls={open ? 'account-menu' : undefined}
+                                    aria-haspopup="true"
+                                    aria-expanded={open ? 'true' : undefined}
+                                >
+                                    <Avatar 
+                                        sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}
+                                        alt={user.name || 'User'}
+                                        src=""
+                                    >
+                                        {user.name ? user.name.charAt(0).toUpperCase() : <PersonIcon />}
+                                    </Avatar>
+                                </IconButton>
+                                
+                                <Menu
+                                    anchorEl={anchorEl}
+                                    id="account-menu"
+                                    open={open}
+                                    onClose={handleMenuClose}
+                                    onClick={handleMenuClose}
+                                    PaperProps={{
+                                        elevation: 0,
+                                        sx: {
+                                            overflow: 'visible',
+                                            filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.1))',
+                                            mt: 1.5,
+                                            '& .MuiAvatar-root': {
+                                                width: 32,
+                                                height: 32,
+                                                ml: -0.5,
+                                                mr: 1,
+                                            },
+                                            '&:before': {
+                                                content: '""',
+                                                display: 'block',
+                                                position: 'absolute',
+                                                top: 0,
+                                                right: 14,
+                                                width: 10,
+                                                height: 10,
+                                                bgcolor: 'background.paper',
+                                                transform: 'translateY(-50%) rotate(45deg)',
+                                                zIndex: 0,
+                                            },
+                                        },
+                                    }}
+                                    transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                                    anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                                >
+                                    <MenuItem onClick={handleProfileClick}>
+                                        <ListItemIcon>
+                                            <ProfileIcon fontSize="small" />
+                                        </ListItemIcon>
+                                        My Profile
+                                    </MenuItem>
+                                    
+                                    {user.role === 'admin' && (
+                                        <MenuItem onClick={handleAdminClick}>
+                                            <ListItemIcon>
+                                                <AdminIcon fontSize="small" />
+                                            </ListItemIcon>
+                                            Admin Dashboard
+                                        </MenuItem>
+                                    )}
+                                    
+                                    <Divider />
+                                    
+                                    <MenuItem onClick={handleLogout}>
+                                        <ListItemIcon>
+                                            <LogoutIcon fontSize="small" />
+                                        </ListItemIcon>
+                                        Logout
+                                    </MenuItem>
+                                </Menu>
+                            </Box>
+                        ) : (
+                            <Button 
+                                color="inherit" 
+                                component={RouterLink} 
+                                to="/auth"
+                                sx={{ textTransform: 'none', fontWeight: 400 }}
+                                startIcon={<PersonIcon />}
+                            >
+                                Login / Register
                             </Button>
                         )}
                     </Box>

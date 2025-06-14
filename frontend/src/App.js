@@ -15,6 +15,7 @@ import ProductDetail from './pages/ProductDetail';
 import Cart from './pages/Cart';
 import Orders from './pages/Orders';
 import Checkout from './pages/Checkout';
+import Profile from './pages/Profile';
 import ProtectedRoute from './components/ProtectedRoute';
 import { SnackbarProvider } from 'notistack';
 
@@ -150,6 +151,11 @@ function App() {
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
                   <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+                  <Route path="/profile" element={
+                    <ProtectedRoute>
+                      <Profile />
+                    </ProtectedRoute>
+                  } />
                   {/* Add more routes as we create the components */}
                 </Routes>
               </Box>
