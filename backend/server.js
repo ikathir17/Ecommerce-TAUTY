@@ -55,6 +55,13 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
+// Serve static files from the React app
+const path = require('path');
+const serveStatic = require('serve-static');
+
+// Serve static files from the React app
+app.use(serveStatic(path.join(__dirname, '../frontend/build')));
+
 // MongoDB connection with retry logic
 const connectDB = async (retryCount = 0) => {
   const maxRetries = 5;
@@ -138,13 +145,30 @@ app.use((req, res) => {
   res.status(404).json({ msg: 'Not Found' });
 });
 
-const PORT = process.env.PORT || 5003;
-const server = app.listen(PORT, () => {
+// Handle React routing, return all requests to React app
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/build/index.html'), {
+    setHeaders: (res, path) => {
+      if (path.endsWith('index.html')) {
+        // Set title for the HTML document
+        let content = require('fs').readFileSync(path, 'utf8');
+        content = content.replace(/<title>.*<\/title>/, '<title>TAUTY Ecommerce</title>');
+        res.setHeader('Content-Type', 'text/html');
+        res.send(content);
+      }
+    }
+  });
+});
+
+// Start the server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log('Serving TAUTY Ecommerce application');
 });
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
   console.error('Unhandled Rejection:', err);
-  server.close(() => process.exit(1));
+  app.close(() => process.exit(1));
 });
