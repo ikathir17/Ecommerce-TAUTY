@@ -56,21 +56,36 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // MongoDB connection with retry logic
-const connectDB = async () => {
-  console.log('Attempting to connect to MongoDB...');
+const connectDB = async (retryCount = 0) => {
+  const maxRetries = 5;
+  const retryDelay = 5000; // 5 seconds
+  
+  console.log(`Attempting to connect to MongoDB (Attempt ${retryCount + 1}/${maxRetries})...`);
+  
   try {
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+      connectTimeoutMS: 10000, // Give up initial connection after 10 seconds
+      maxPoolSize: 10, // Maximum number of connections in the connection pool
+      retryWrites: true,
+      w: 'majority'
     });
-    console.log('MongoDB connected successfully');
+    
+    console.log('✅ MongoDB connected successfully');
   } catch (error) {
-    console.error('MongoDB connection error:', error);
-    console.error('MongoDB URI:', process.env.MONGODB_URI ? 'Present' : 'Missing');
-    // Retry connection after 5 seconds
-    console.log('Retrying connection in 5 seconds...');
-    setTimeout(connectDB, 5000);
+    console.error('❌ MongoDB connection error:', error.message);
+    
+    if (retryCount < maxRetries - 1) {
+      console.log(`Retrying in ${retryDelay / 1000} seconds... (${retryCount + 1}/${maxRetries})`);
+      setTimeout(() => connectDB(retryCount + 1), retryDelay);
+    } else {
+      console.error('❌ Max retries reached. Could not connect to MongoDB.');
+      console.error('Please check your MongoDB Atlas configuration and network settings.');
+      process.exit(1);
+    }
   }
 };
 
