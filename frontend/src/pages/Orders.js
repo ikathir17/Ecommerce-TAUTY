@@ -50,86 +50,189 @@ const OrderStats = ({ orders }) => {
         orders: value
     }));
 
+    // Sort data for consistent display
+    pieData.sort((a, b) => b.value - a.value);
+    barData.sort((a, b) => b.orders - a.orders);
+
+    // Calculate container height based on content
+    const chartHeight = Math.max(400, 100 + (barData.length * 50));
+    const pieOuterRadius = 150;
+
     return (
         <Box sx={{ 
-            mt: 4, 
+            width: '100%',
+            p: { xs: 2, sm: 3 },
             mb: 4,
-            px: { xs: 2, md: 0 },
-            py: { xs: 2, md: 4 },
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            width: '100%'
+            overflow: 'visible',
+            minHeight: 'calc(100vh - 200px)'
         }}>
-            <Typography variant="h5" gutterBottom sx={{ textAlign: 'center' }}>Order Statistics</Typography>
-            <Grid container spacing={3} justifyContent="center">
+            <Typography variant="h5" gutterBottom sx={{ 
+                textAlign: 'center',
+                mb: 4,
+                fontWeight: 500,
+                color: 'text.primary'
+            }}>
+                Order Statistics
+            </Typography>
+            
+            <Grid container spacing={3} justifyContent="center" sx={{ width: '100%', m: 0, maxWidth: '100%' }}>
                 {/* Pie Chart */}
-                <Grid item xs={12} md={12} sx={{ maxWidth: 1000 }}>
+                <Grid item xs={12} md={6} sx={{ minHeight: '500px' }}>
                     <Paper 
-                        elevation={3} 
+                        elevation={2} 
                         sx={{ 
-                            p: 2, 
+                            p: { xs: 1, sm: 2 },
                             height: '100%',
                             display: 'flex',
                             flexDirection: 'column',
-                            alignItems: 'center'
+                            borderRadius: 2,
+                            bgcolor: 'background.paper',
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
+                        }}
+                    >
+                        <Typography variant="h6" align="center" gutterBottom sx={{ 
+                            fontWeight: 500,
+                            color: 'text.primary',
+                            mb: 3,
+                            px: 1
                         }}>
-                        <Typography variant="h6" align="center" gutterBottom>
                             Order Status Distribution
                         </Typography>
-                        <ResponsiveContainer width="100%" height={500}>
-                            <PieChart>
-                                <Pie
-                                    data={pieData}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={false}
-                                    outerRadius={180}
-                                    fill="#8884d8"
-                                    dataKey="value"
-                                    label={({ name, percent }) => 
-                                        `${name}: ${(percent * 100).toFixed(0)}%`
-                                    }
-                                >
-                                    {pieData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip formatter={(value) => [`${value} orders`, 'Count']} />
-                                <Legend />
-                            </PieChart>
-                        </ResponsiveContainer>
+                        <Box sx={{ 
+                            width: '100%', 
+                            height: chartHeight,
+                            minHeight: '400px',
+                            position: 'relative'
+                        }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={pieData}
+                                        cx="50%"
+                                        cy="50%"
+                                        labelLine={false}
+                                        outerRadius={pieOuterRadius}
+                                        fill="#8884d8"
+                                        dataKey="value"
+                                        label={({ name, percent }) => 
+                                            `${name}: ${(percent * 100).toFixed(0)}%`
+                                        }
+                                        paddingAngle={2}
+                                        minAngle={5}
+                                    >
+                                        {pieData.map((entry, index) => (
+                                            <Cell 
+                                                key={`cell-${index}`} 
+                                                fill={PIE_COLORS[index % PIE_COLORS.length]} 
+                                                stroke="#fff"
+                                                strokeWidth={1}
+                                            />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip 
+                                        formatter={(value) => [`${value} orders`, 'Count']}
+                                        contentStyle={{
+                                            borderRadius: '8px',
+                                            border: 'none',
+                                            boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+                                        }}
+                                    />
+                                    <Legend 
+                                        layout="horizontal"
+                                        verticalAlign="bottom"
+                                        height={36}
+                                        wrapperStyle={{
+                                            paddingTop: '20px',
+                                            position: 'relative',
+                                            bottom: '10px'
+                                        }}
+                                    />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </Box>
                     </Paper>
                 </Grid>
 
                 {/* Bar Chart */}
-                <Grid item xs={12} md={12} sx={{ maxWidth: 1000 }}>
+                <Grid item xs={12} md={6} sx={{ minHeight: '500px' }}>
                     <Paper 
-                        elevation={3} 
-                        sx={{ 
-                            p: 2, 
+                        elevation={2}
+                        sx={{
+                            p: { xs: 1, sm: 2 },
                             height: '100%',
                             display: 'flex',
                             flexDirection: 'column',
-                            alignItems: 'center'
+                            borderRadius: 2,
+                            bgcolor: 'background.paper',
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
+                        }}
+                    >
+                        <Typography variant="h6" align="center" gutterBottom sx={{
+                            fontWeight: 500,
+                            color: 'text.primary',
+                            mb: 3
                         }}>
-                        <Typography variant="h6" align="center" gutterBottom>
                             Orders by Status
                         </Typography>
-                        <ResponsiveContainer width="100%" height={500}>
-                            <BarChart data={barData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" />
-                                <YAxis />
-                                <Tooltip formatter={(value) => [value, 'Number of Orders']} />
-                                <Legend />
-                                <Bar dataKey="orders" name="Orders">
-                                    {barData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
+                        <Box sx={{ 
+                            width: '100%', 
+                            height: chartHeight,
+                            minHeight: '400px',
+                            position: 'relative'
+                        }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart 
+                                    data={barData}
+                                    margin={{
+                                        top: 20,
+                                        right: 30,
+                                        left: 20,
+                                        bottom: 50,
+                                    }}
+                                >
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                    <XAxis 
+                                    dataKey="name" 
+                                    angle={-45}
+                                    textAnchor="end"
+                                    height={80}
+                                    tick={{ fontSize: 12, fill: 'text.secondary' }}
+                                    interval={0}
+                                    minTickGap={-10}
+                                    tickMargin={10}
+                                />
+                                    <YAxis 
+                                        tick={{ fontSize: 12 }}
+                                        width={40}
+                                    />
+                                    <Tooltip 
+                                        formatter={(value) => [value, 'Number of Orders']}
+                                        contentStyle={{
+                                            borderRadius: '8px',
+                                            border: 'none',
+                                            boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
+                                        }}
+                                    />
+                                    <Legend 
+                                        wrapperStyle={{
+                                            paddingTop: '20px'
+                                        }}
+                                    />
+                                    <Bar 
+                                        dataKey="orders" 
+                                        name="Orders"
+                                        radius={[4, 4, 0, 0]}
+                                    >
+                                        {barData.map((entry, index) => (
+                                            <Cell 
+                                                key={`bar-cell-${index}`} 
+                                                fill={BAR_COLORS[index % BAR_COLORS.length]}
+                                            />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </Box>
                     </Paper>
                 </Grid>
             </Grid>

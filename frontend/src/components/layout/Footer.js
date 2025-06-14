@@ -38,8 +38,12 @@ const Footer = () => {
                         <Typography variant="subtitle1" gutterBottom>
                             Contact Us
                         </Typography>
-                        <Typography variant="body2">Email: support@tauty.com</Typography>
-                        <Typography variant="body2">Phone: +1 (800) 123-4567</Typography>
+                        <Typography variant="body2" component="a" href="mailto:kathiresanp80152@gmail.com" sx={{ color: 'inherit', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>
+                            Email: kathiresanp80152@gmail.com
+                        </Typography>
+                        <Typography variant="body2" component="a" href="tel:+918754780152" sx={{ color: 'inherit', textDecoration: 'none', '&:hover': { textDecoration: 'underline' }, display: 'block', mt: 1 }}>
+                            Phone: +91 87547 80152
+                        </Typography>
                     </Box>
                 </Stack>
 
